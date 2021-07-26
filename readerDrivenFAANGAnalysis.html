@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="https://d3js.org/d3.v4.js"></script>
+<style>
+body{padding: 5px;background-color: #e6f2ff;}
+h1{color:blue;text-align:center;}
+h2{width:1000px; margin:0 auto; text-align: center; align-content: center; align-self: center;}
+p {width:1000px; margin:0 auto; text-align: center; align-content: center; align-self: center;}
+.tooltip  {border-style:outset;position:absolute;background-color:Aliceblue;padding:5px}
+.chart    {margin: 0 auto;text-align:center;}
+</style>
+<H1>FAANG STOCKS HISTORICAL GROWTH</H1>
+<H2>Explore the Data</H2><br>
+<p>Have fun exploring the data! To see data values for a specific year in the chart, and check the % stock growth relative to 2013, you can hover your mouse over the chart to reveal a tooltip which has the details for all the stocks.If you would like to return to first page, click on the button below.</p><br><br>
+<div style="text-align: center;">
+  <input style="text-align: center;" type="button" id='button' value="Return to the First Page"/>
+</div><br><br>
+<div id="chart_div" class="chart"></div>
+<div id='tt_div' class="tooltip"></div>
+<script>
+    d3.csv("https://aparnac2.github.io/Stock_data.csv", function(error, data) {
+        if (error) throw error;
+		 d3.select("#button").on("click", function(d) {
+          window.location.replace(window.location.href.slice(0, window.location.href.lastIndexOf("/") + 1) + "authorDrivenFAANGAnalysis.html");
+          return;
+        });
+	var margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = 1000 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom,
+        chartSvg,pctChgStocksArr, tooltipGrid,visibleStocks = {}        
+        ,stockNames = data.map(function(d) { return d['series']; })
+        ,years = data.columns.slice(1).map(y => parseInt(y)),x, y, yMin, yMax,pctChgStocks = {},pctChgStocksArr = []
+		,stocksColorsArr = {
+          "Facebook_Stock": "#2980B9",
+          "Amazon_Stock": "#e6ab02",
+          "Apple_Stock": "#515A5A",
+          "Netflix_Stock": "#FF5733",
+          "Google_Stock": "#2ECC71",
+        }, year, tooltipLeft;
+        
+    chartSvg = d3.select("#chart_div")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+		  
+		  stockNames.forEach(s => pctChgStocks[s] = d3.range(d3.min(years), d3.max(years) + 1)
+                        .map(y => {
+                                return {
+                                  year: y,
+                                  stockPrice: (data.find(d => d['series'] == s))[y],
+                                  pctChange: +(((data.find(d => d['series'] == s))[y] - (data.find(d => d['series'] == s))[d3.min(years)]) * 100 / (data.find(d => d['series'] == s))[d3.min(years)]).toFixed(2)
+                                }
+                          }))
+          for (s in pctChgStocks) {
+              pctChgStocksArr.push({series: s, values: pctChgStocks[s]});
+          }
+          pctChgStocksArr = pctChgStocksArr.reverse();
+          x = d3.scaleLinear().domain([d3.min(years), d3.max(years)]).range([0, width]);
+          y = d3.scaleLinear().domain([d3.min(d3.values(pctChgStocks).flat().map(v => v.pctChange)), d3.max(d3.values(pctChgStocks).flat().map(v => v.pctChange))]).range([ height, 0 ]);
+		  chartSvg.append("text")
+                  .attr("transform",
+                      "translate(" + (width/2) + " ," + 
+                                    (height + margin.top + 20) + ")")
+                  .style("text-anchor", "middle")
+                  .text("Year")
+				  .attr("font-weight",550);  
+
+          chartSvg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+            chartSvg.append("text")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left)
+              .attr("x", -(height / 2))
+              .attr("dy", "1em")
+              .style("text-anchor", "middle")
+              .text("% Stock Growth relative to " + d3.min(years))
+				  .attr("font-weight",550);  
+			  
+          chartSvg.append("g").call(d3.axisLeft(y));
+                
+        function drawGraphLine(dataArr) 
+		{
+          var stockName = dataArr.series
+           ,tt = d3.select("#tt_div")
+           ,tooltipVL = chartSvg.append("line")
+           ,grphLine = chartSvg.append("path")
+              .attr("stroke", stocksColorsArr[stockName])
+              .attr("stroke-width", stockName.includes("Netflix") ? 3 : 2)
+              .attr("fill", "none")
+              .attr("id", "chart-line-" + stockName)
+              .attr("class", "chart-line")
+			  .attr("d",function(d){
+						   return d3.line()
+							 .x(function(d) {return x(d.year);})
+							 .y(function(d) {return y(d.pctChange);})
+							 (dataArr.values)
+							 });	     
+		 grphLine
+              .attr("stroke-dasharray", grphLine.node().getTotalLength() + " " + grphLine.node().getTotalLength())
+              .attr("stroke-dashoffset", grphLine.node().getTotalLength())
+              .transition().duration(1000).ease(d3.easeLinear).attr("stroke-dashoffset", 0);            
+          visibleStocks[stockName] = 1;
+          chartSvg.selectAll("#tooltipGrid").remove();
+          tooltipGrid = chartSvg.append('rect')
+                          .attr("id", "tooltipGrid")
+                          .attr('width', width)
+                          .attr('height', height)
+                          .attr('opacity', 0)
+						  .attr('fill','#1b9e77')
+                          .on('mousemove', function(tooltipYear){
+												year = Math.round((x.invert(d3.mouse(tooltipGrid.node())[0])));
+												tooltipLeft = x(Math.round((x.invert(d3.mouse(tooltipGrid.node())[0])))) + 20 + d3.select("#chart_div").node().children[0].getBoundingClientRect().left;
+         
+													tooltipVL.attr('stroke', 'black')
+																.attr('x1', x(Math.round((x.invert(d3.mouse(tooltipGrid.node())[0])))))
+																.attr('x2', x(Math.round((x.invert(d3.mouse(tooltipGrid.node())[0])))))
+																.attr('y1', 0)
+																.attr('y2', height);
+																
+													var stocksToShow = pctChgStocksArr.filter(s => s['series'] in visibleStocks);
+													tt.html("<center>\tYear: " + Math.round((x.invert(d3.mouse(tooltipGrid.node())[0]))) + " </br>\t % change relative to " + d3.min(years) + "</br></br></center>")
+															.style('display', 'block')
+															.style("left", tooltipLeft + "px")		
+															.style("top", (d3.event && d3.event.pageY || y(yMax / 3)) + "px")
+															.selectAll()
+															.data(stocksToShow)
+															.enter()
+															.append('div')
+															.style('color', (d, i) => stocksColorsArr[d['series']])
+															.html(d => {
+																return d['series'].split("_").join(" ") + ":&ensp;" + "$" + d3.format(",.0f")(d['values'].find(v => v.year == year).stockPrice) + "&ensp;" + d['values'].find(v => v.year == year).pctChange + "% ";
+															});
+													})
+		}
+        pctChgStocksArr.forEach(s => drawGraphLine(s));	
+	 
+    });
+	
+</script>

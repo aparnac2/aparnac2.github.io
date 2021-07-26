@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="https://d3js.org/d3.v4.js"></script>
+<style>
+body{padding: 5px;background-color: #e6f2ff;}
+h1{color:blue;text-align:center;}
+h2{width:1000px; margin:0 auto; text-align: center; align-content: center; align-self: center;}
+p {width:1000px; margin:0 auto; text-align: center; align-content: left; align-self: center;}
+.disclaimer{text-align: center; align-content: center; align-self: center; font-size: 80%;	 }
+.lgnd   {border-style:outset;position:absolute;background-color:white;padding:5px; display:none}
+.chart  {text-align:center;margin: 0 auto;}
+</style>
+<H1>FAANG STOCKS HISTORICAL GROWTH</H1>
+<H2 id='title'>Introduction</H2><br>
+<p class='intro-text'>
+In finance, “FAANG” is an acronym that refers to the stocks of five prominent American technology companies: Facebook (FB), Amazon (AMZN), Apple (AAPL), Netflix (NFLX); and Alphabet (GOOG) (formerly known as Google).The term was coined by Jim Cramer, the television host of CNBC's Mad Money, in 2013, who praised these companies for being “totally dominant in their markets”. Originally, the term FANG was used, with Apple—the second “A” in the acronym—added in 2017.<br><br>
+In addition to being widely known among consumers, the five FAANG stocks are among the largest companies in the world, with a combined market capitalization of nearly $5.6 trillion as of Aug. 13, 2020.Their substantial growth has been buoyed recently by high-profile purchases made by large and influential investors such as Berkshire Hathaway (BRK), Soros Fund Management, and Renaissance Technologies.These are just a few of the many large investors who have added FAANG stocks to their portfolios because of their perceived strength, growth, or momentum.Each of the FAANG stocks trades on the Nasdaq exchange and is included in the S&P 500 Index. Since the S&P 500 is a broad representation of the market, the movement of the market mirrors the index's movement. Together, the FAANGs make up about 15% of the S&P 500—a staggering figure considering the S&P 500 is generally viewed as a proxy for the United States economy as a whole.This large influence over the index means that volatility in the stock price of the FAANG stocks can have a substantial effect on the performance of the S&P 500 in general. In August 2018, for example, FAANG stocks were responsible for nearly 40% of the index’s gain from the lows reached in February 2018
+<br><br>
+Through the charts in the next few pages, let us look at the historical growth of the FAANG stocks since 2013 (this year has been chosen because Facebook's IPO launched in May 2012 and we have facebook stock data available since then. Data is shown from 1/1/2013 to 1/1/2021)<br><br>
+Whenever you're ready to get started, click the "Start" button below to start and then click "Next" on each page to navigate. <br><br>
+</p>
+<div style="text-align: center;" >
+<input  style="text-align: center;" type="button" id='button' value="Start" />
+</div>
+<br>
+<div id="disclaimer_div" style="text-align: center;" class="disclaimer" >
+All data presented is from the yahoo finance historical data and stock value shown is the data as of January of the year. The above introduction of FAANG is from Investopedia website.
+</div>
+<div id="chart_div" class="chart"></div>
+<div id="lgnd_div" class="lgnd"></div>
+
+<script>
+    d3.csv("https://aparnac2.github.io/Stock_data.csv", function(error, data) {
+        if (error) throw error;
+	  d3.select("#button").on("click", function(){
+          d3.selectAll(".annotation").remove();
+		  d3.selectAll(".intro-text").remove();
+		  d3.selectAll(".disclaimer").remove();
+	      d3.select("#button").attr("value", pageNumber==4 ? "Explore the data" : "Next");
+          pageNumber==0 ? drawAxis(): ( pageNumber==5? ( window.location.replace(window.location.href.slice(0, window.location.href.lastIndexOf("/") + 1) + "readerDrivenFAANGAnalysis.html")):true)
+          d3.select("#button").attr("disabled", true);
+          d3.select("#title").text(pageTitles[pageNumber]);
+          stocksToAdd[pageNumber].forEach(s => drawGraphLine(pctChgStocksArr.find(sn => sn['series'] == s)));
+		  setTimeout(function(){ stocksToAdd[pageNumber-1].forEach(s =>drawAnnotation(pctChgStocksArr.find(sn => sn['series'] == s)));},2400);
+	      setTimeout(() => { d3.select("#button").attr("disabled", null); }, 3100);
+          pageNumber=pageNumber+1;
+        });
+	     var margin = {top: 10, right: 100, bottom: 30, left: 60},
+        width = 1000 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom  
+	   ,chartSvg,pctChgStocksArr,visibleStocks = {}, x, y
+       ,stockNames = data.map(function(d) { return d['series']; })
+       ,years = data.columns.slice(1).map(y => parseInt(y))
+       ,stocksColorsArr = {
+								"Facebook_Stock": "#2980B9",
+								"Amazon_Stock": "#e6ab02",
+								"Apple_Stock": "#515A5A",
+								"Netflix_Stock": "#FF5733",
+								"Google_Stock": "#2ECC71",
+							  }
+	  ,stockStrokeWidthArr = {
+								"Facebook_Stock": 2,
+								"Amazon_Stock": 2,
+								"Apple_Stock": 2,
+								"Netflix_Stock": 3,
+								"Google_Stock": 2,
+							 }
+	 ,pageNumber = 0
+     ,stocksToAdd = [["Facebook_Stock"],
+                           ["Amazon_Stock"],
+                           ["Apple_Stock"],
+                           ["Netflix_Stock"],
+                           ["Google_Stock",]
+                          ]
+      ,annotationXPos = {
+							"Facebook_Stock": 2018.5,
+							"Amazon_Stock": 2018,
+							"Apple_Stock": 2019.5,
+							"Netflix_Stock": 2018,
+							"Google_Stock": 2015
+							}   
+	   ,annotationYPos = {
+							"Facebook_Stock": 500,
+							"Amazon_Stock":  450,
+							"Apple_Stock": 220,
+							"Netflix_Stock": 1000,
+							"Google_Stock":  100} 
+	   ,annotationtextArr1 = {
+							"Facebook_Stock": "2018 has been a tumultuous year for Facebook.Several incidents like security breach, cambridge",
+							"Amazon_Stock":  "Amazon stock increased nearly 77% annually by the begining of 2018 when compared to the",
+							"Apple_Stock":  "Apple stock soared 86.2% in 2019 The tech stock's share price tracked relatively closely with",
+							"Netflix_Stock":"The Netflix stock price increased 92% annually by the begining of 2018 when",
+							"Google_Stock":  "Google stock showed a steady increase or atleast maintained its stock price value except for"} 
+	   ,annotationtextArr2 = {
+							"Facebook_Stock": "analytica scandal, executive exodus among others throughout the year caused the company share",
+							"Amazon_Stock":  "begining of 2017.This rise was primarily driven by a significant jump in Revenues as well",
+							"Apple_Stock":  "momentum for the broader market for much of the year and then dramatically outperformed from",
+							"Netflix_Stock": "compared to the beginging of 2017 and increased 1045% by the begining",
+							"Google_Stock":  "one minor drop in price when compared to previous year in the begining of 2015, stock price"} 
+	   ,annotationtextArr3 = {
+							"Facebook_Stock": "price to drop 20% by the beginging of 2019 when compared to the begining of 2018.",
+							"Amazon_Stock":  "as Net Income Margin and a slight increase in share count, and a reduction in P/E multiple.",
+							"Apple_Stock":  "September through December thanks to strong performance for its wearables products.",
+							"Netflix_Stock": "of 2018 when compared to begining of 2013",
+							"Google_Stock":  "fell 0.09% compared to the begining of 2014"} 
+	   ,annotationtextXPos = {
+							"Facebook_Stock": 2015,
+							"Amazon_Stock":  2015,
+							"Apple_Stock":   2015,
+							"Netflix_Stock": 2014,
+							"Google_Stock":  2014}
+		,annotationtextYPos = {
+							"Facebook_Stock": 1400,
+							"Amazon_Stock":   1400,
+							"Apple_Stock":    1400,
+							"Netflix_Stock":  1400,
+							"Google_Stock":   1800}
+        ,pageTitles = ["Facebook Stock",
+                           "Amazon Stock",
+                           "Apple Stock",
+                           "Netflix Stock",
+                           "Google Stock"]
+    
+    function drawAxis() {
+
+		var pctChgStocks = {};
+        
+          chartSvg = d3.select("#chart_div")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+              .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+		  
+		  stockNames.forEach(s => pctChgStocks[s] = d3.range(d3.min(years), d3.max(years) + 1)
+                        .map(y => {
+                                return {
+                                  year: y,
+                                  stockPrice: (data.find(d => d['series'] == s))[y],
+                                  pctChange: +(((data.find(d => d['series'] == s))[y] - (data.find(d => d['series'] == s))[d3.min(years)]) * 100 / (data.find(d => d['series'] == s))[d3.min(years)]).toFixed(2)
+                                }
+                          }))
+		  pctChgStocksArr = []
+          
+          for (s in pctChgStocks) {
+              pctChgStocksArr.push({series: s, values: pctChgStocks[s]});
+          }
+		  pctChgStocksArr = pctChgStocksArr.reverse();
+          x = d3.scaleLinear().domain([d3.min(years), d3.max(years)]).range([0, width]);
+          y = d3.scaleLinear().domain([d3.min(d3.values(pctChgStocks).flat().map(v => v.pctChange)), d3.max(d3.values(pctChgStocks).flat().map(v => v.pctChange))]).range([ height, 0 ]);
+          
+          chartSvg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+          chartSvg.append("text")
+                  .attr("transform",
+                      "translate(" + (width/2) + " ," + 
+                                    (height + margin.top + 20) + ")")
+                  .style("text-anchor", "middle")
+                  .text("Year")
+				  .attr("font-weight",550);  
+            
+            chartSvg.append("text")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left)
+              .attr("x", -(height / 2))
+              .attr("dy", "1em")
+              .style("text-anchor", "middle")
+              .text("% Stock Growth relative to " + d3.min(years))
+			  				  .attr("font-weight",550);  
+      
+          chartSvg.append("g").call(d3.axisLeft(y));
+        
+        }
+       
+		  function drawGraphLine(dataArr) {
+          var stockName = dataArr.series;
+        
+          var grphLine = chartSvg.append("path")
+              .attr("stroke", stocksColorsArr[stockName])
+              .attr("stroke-width",stockStrokeWidthArr[stockName])
+			  .attr("fill", "none")
+              .attr("d", function(d){
+						   return d3.line()
+							 .x(function(d) {return x(d.year);})
+							 .y(function(d) {return y(d.pctChange);})
+							 (dataArr.values)
+							 })
+							 ;	
+            grphLine
+              .attr("stroke-dasharray", grphLine.node().getTotalLength() + " " + grphLine.node().getTotalLength())
+              .attr("stroke-dashoffset", grphLine.node().getTotalLength())
+              .transition().duration(2000).delay(200).ease(d3.easeLinear).attr("stroke-dashoffset", 0);
+          visibleStocks[stockName] = 1;
+      var stocksToShow = pctChgStocksArr.filter(s => s['series'] in visibleStocks);
+      if (stocksToShow.length == 0) {
+        d3.select("#lgnd_div").style("display", "none");
+        return;
+      }
+		  d3.select("#lgnd_div").html("")
+           .style('display', 'block')
+           .style('left', d3.event.pageX + 20)
+           .style('top', d3.event.pageY - 20)
+           .style("left", (d3.select("#chart_div").node().children[0].getBoundingClientRect().left + margin.left + 20) + "px")		
+           .style("top", (d3.select("#chart_div").node().children[0].getBoundingClientRect().top + y(800)) + "px")
+           .selectAll()
+           .data(stocksToShow)
+           .enter()
+           .append('div')
+                .style('color', (d, i) => stocksColorsArr[d['series']])
+               .html(d => {
+                  if (d['series'].includes("Netflix")) {
+                    return "<b>" + d['series'].split("_").join(" ") + "</b>";
+                  }
+                  return d['series'].split("_").join(" ");
+                 });
+}
+ function drawAnnotation(dataArr) {
+          var stockName = dataArr.series;
+     	  chartSvg.append("circle")
+                  .attr("class", "annotation")
+                  .attr("cx", x(annotationXPos[stockName]))
+                  .attr("cy", y(annotationYPos[stockName]))
+                  .attr("r", 40)
+                  .attr("stroke", "black")
+                  .attr("stroke-dasharray", "5")
+                  .attr("fill", "none");
+		[annotationtextArr1[stockName], annotationtextArr2[stockName], annotationtextArr3[stockName]].forEach((t, i) => {
+            chartSvg.append("text")
+                  .attr("class", "annotation")
+                    .attr('x', x(annotationtextXPos[stockName])).attr('y', y(annotationtextYPos[stockName]) + i * 20).text(t);});
+					}
+					
+    });
+</script>
